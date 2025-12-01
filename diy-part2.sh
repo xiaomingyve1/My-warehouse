@@ -18,3 +18,7 @@
 
 # Modify hostname
 #sed -i 's/OpenWrt/P3TERX-Router/g' package/base-files/files/bin/config_generate
+
+# 这里必须填入你要的那个旧软件的源码地址
+# 举例：如果你想要旧版的某插件，把下面这行的 # 去掉并改成真实地址
+# git clone https://github.com/你的旧软件作者/仓库名.git package/my-old-app
