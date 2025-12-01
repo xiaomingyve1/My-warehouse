@@ -21,3 +21,6 @@ echo "src-git openclash https://github.com/vernesong/OpenClash.git" >> feeds.con
 # 添加 Passwall 依赖源 (为了防止 Passwall 编译报错)
 echo "src-git passwall_packages https://github.com/xiaorouji/openwrt-passwall-packages.git;main" >> feeds.conf.default
 echo "src-git passwall_luci https://github.com/xiaorouji/openwrt-passwall.git;main" >> feeds.conf.default
+# 添加 LinkEase 源 (为了编译 ddnsto)
+echo "src-git nas_packages https://github.com/linkease/nas-packages.git;master" >> feeds.conf.default
+echo "src-git nas_luci https://github.com/linkease/nas-packages-luci.git;main" >> feeds.conf.default
