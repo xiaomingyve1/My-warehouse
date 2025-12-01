@@ -1,9 +1,7 @@
 #!/bin/bash
-# ==============================================================================
-# VIKINGYFY 脚本全量移植版 (整合 Packages.sh + Handles.sh + Settings.sh)
-# ==============================================================================
+# 优先使用源码自带插件 (Native First)
 
-# --- 基础设置 (请确认 WiFi 密码) ---
+# --- 基础设置 ---
 WRT_IP="192.168.6.1"       # 主机IP
 WRT_NAME="MyRouter-0"      # 主机名
 WRT_THEME="argon"          # 默认主题
@@ -11,24 +9,22 @@ WRT_SSID="My_AP8220"       # WiFi 名称
 WRT_WORD="12345678"        # WiFi 密码
 WRT_TARGET="QUALCOMMAX"    # 目标平台 (高通专用)
 
-# --- 手动下载插件 (源里没有的，或者求稳的，全在这里下) ---
+# --- 插件处理 (只处理源码里没有的，或者特例) ---
 
-# [主题] Argon
-git clone https://github.com/sbwml/luci-theme-argon.git package/luci-theme-argon
-# [主题] KuCat (备用)
-git clone https://github.com/sirpdboy/luci-theme-kucat package/luci-theme-kucat
-# [插件] MosDNS
-git clone https://github.com/sbwml/luci-app-mosdns.git package/mosdns
-# [插件] DiskMan (磁盘管理)
-git clone https://github.com/lisaac/luci-app-diskman.git package/diskman
-# [插件] EasyTier
-git clone https://github.com/EasyTier/OpenWrt-EasyTier package/easytier
-# [插件] UU加速器 (FW4 适配版)
+# UU加速器24.02
+# 先删除源码自带的旧版 uugamebooster
+rm -rf feeds/luci/applications/luci-app-uugamebooster
+rm -rf feeds/packages/net/uugamebooster
+# 下载适配 FW4 的新版
 git clone https://github.com/BCYDTZ/luci-app-UUGameAcc.git package/luci-app-UUGameAcc
-# [插件] 你的旧版 IPK 源码 (记得修改地址，没用到就注释掉)
+# EasyTier (源码里没有，必须下)
+git clone https://github.com/EasyTier/OpenWrt-EasyTier package/easytier
+# KuCat 主题 (源码里没有，必须下)
+git clone https://github.com/sirpdboy/luci-theme-kucat package/luci-theme-kucat
+# 你的旧版软件 (如果有)
 # git clone https://github.com/你的旧软件作者/仓库名.git package/my-old-app
 
-# --- 编译修复与补丁 ---
+# --- 编译修复补丁 (必要的修正) ---
 
 # 预置 HomeProxy 数据 (防止编译报错)
 if [ -d package/homeproxy ]; then
@@ -49,7 +45,7 @@ NSS_DRV=$(find feeds/nss_packages/ -name "qca-nss-drv.init")
 NSS_PBUF="./package/kernel/mac80211/files/qca-nss-pbuf.init"
 [ -f "$NSS_PBUF" ] && sed -i 's/START=.*/START=86/g' $NSS_PBUF
 
-# 编译报错修复
+# 常用软件编译错误修复
 TS_FILE=$(find ../feeds/packages/ -maxdepth 3 -type f -wholename "*/tailscale/Makefile")
 [ -f "$TS_FILE" ] && sed -i '/\/files/d' $TS_FILE
 RUST_FILE=$(find ../feeds/packages/ -maxdepth 3 -type f -wholename "*/rust/Makefile")
@@ -57,10 +53,7 @@ RUST_FILE=$(find ../feeds/packages/ -maxdepth 3 -type f -wholename "*/rust/Makef
 DM_FILE="./package/diskman/applications/luci-app-diskman/Makefile"
 [ -f "$DM_FILE" ] && { sed -i 's/fs-ntfs/fs-ntfs3/g' $DM_FILE; sed -i '/ntfs-3g-utils /d' $DM_FILE; }
 
-
-# ==============================================================================
 # --- 系统设置 ---
-# ==============================================================================
 
 # 修改 IP / 主机名 / 默认主题
 sed -i "s/192\.168\.[0-9]*\.[0-9]*/$WRT_IP/g" package/base-files/files/bin/config_generate
@@ -81,8 +74,9 @@ elif [ -f "$WIFI_UC" ]; then
     sed -i "s/country='.*'/country='CN'/g" $WIFI_UC
 fi
 
-# --- 高通平台专用配置 ---
+# --- 高通平台 (AP8220) 专用配置 ---
 if [[ "${WRT_TARGET^^}" == *"QUALCOMMAX"* ]]; then
+    # 强制关闭 NSS Feed，使用源码自带驱动
 	echo "CONFIG_FEED_nss_packages=n" >> .config
 	echo "CONFIG_FEED_sqm_scripts_nss=n" >> .config
 	echo "CONFIG_PACKAGE_luci-app-sqm=y" >> .config
@@ -92,7 +86,7 @@ if [[ "${WRT_TARGET^^}" == *"QUALCOMMAX"* ]]; then
 	echo "CONFIG_NSS_FIRMWARE_VERSION_12_5=y" >> .config
 fi
 
-# 强制追加主题配置
+# 强制设置主题
 echo "CONFIG_PACKAGE_luci-theme-$WRT_THEME=y" >> .config
 echo "CONFIG_PACKAGE_luci-app-$WRT_THEME-config=y" >> .config
 
