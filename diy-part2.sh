@@ -3,7 +3,7 @@
 # VIKINGYFY 脚本全量移植版 (整合 Packages.sh + Handles.sh + Settings.sh)
 # ==============================================================================
 
-# --- 0. 基础设置 (请确认 WiFi 密码) ---
+# --- 基础设置 (请确认 WiFi 密码) ---
 WRT_IP="192.168.6.1"       # 主机IP
 WRT_NAME="MyRouter-0"      # 主机名
 WRT_THEME="argon"          # 默认主题
@@ -11,51 +11,19 @@ WRT_SSID="My_AP8220"       # WiFi 名称
 WRT_WORD="12345678"        # WiFi 密码
 WRT_TARGET="QUALCOMMAX"    # 目标平台 (高通专用)
 
-# --- 用户定制区 (你的插件) ---
+# --- 必要的补充插件 (源里没有的才在这里下) ---
 
-# [主题] KuCat
-git clone https://github.com/sirpdboy/luci-theme-kucat package/luci-theme-kucat
-# [插件] EasyTier
+# [插件] EasyTier (源里通常没有最新版)
 git clone https://github.com/EasyTier/OpenWrt-EasyTier package/easytier
-# [插件] UU加速器 (FW4 适配版)
+# [插件] UU加速器 (FW4 适配版，源里的是旧版，必须手动下新的)
 git clone https://github.com/BCYDTZ/luci-app-UUGameAcc.git package/luci-app-UUGameAcc
-# [插件] 你的旧版 IPK 源码
+# [插件] 你的旧版 IPK 源码 (如果有的话)
 # git clone https://github.com/你的旧软件作者/仓库名.git package/my-old-app
 
-# --- 智能包管理 (源自 Packages.sh) ---
 
-UPDATE_PACKAGE() {
-	local PKG_NAME=$1
-	local PKG_REPO=$2
-	local PKG_BRANCH=$3
-	local PKG_SPECIAL=$4
-	local PKG_LIST=("$PKG_NAME" $5)
-	
-	# 智能清理冲突目录
-	for NAME in "${PKG_LIST[@]}"; do
-		local FOUND_DIRS=$(find ../feeds/luci/ ../feeds/packages/ -maxdepth 3 -type d -iname "*$NAME*" 2>/dev/null)
-		if [ -n "$FOUND_DIRS" ]; then
-			while read -r DIR; do
-				rm -rf "$DIR"
-			done <<< "$FOUND_DIRS"
-		fi
-	done
-	git clone --depth=1 --single-branch --branch $PKG_BRANCH "https://github.com/$PKG_REPO.git" package/$PKG_NAME
-	if [[ "$PKG_SPECIAL" == "pkg" ]]; then
-		cp -rf package/$PKG_NAME/*/* package/$PKG_NAME/ 2>/dev/null || true
-	fi
-}
+# --- 编译修复补丁 (Handles.sh) ---
 
-# --- 官方插件列表 (保留核心组件) ---
-UPDATE_PACKAGE "argon" "sbwml/luci-theme-argon" "openwrt-24.10"
-UPDATE_PACKAGE "openclash" "vernesong/OpenClash" "dev" "pkg"
-UPDATE_PACKAGE "passwall" "xiaorouji/openwrt-passwall" "main" "pkg"
-UPDATE_PACKAGE "mosdns" "sbwml/luci-app-mosdns" "v5" "" "v2dat"
-UPDATE_PACKAGE "diskman" "lisaac/luci-app-diskman" "master"
-
-# --- 编译修复补丁 (源自 Handles.sh) ---
-
-# 预置 HomeProxy 数据 (防止编译报错)
+#  [预置] HomeProxy 数据
 if [ -d package/homeproxy ]; then
 	HP_RULE="surge"
 	HP_PATH="package/homeproxy/root/etc/homeproxy"
@@ -68,18 +36,13 @@ if [ -d package/homeproxy ]; then
 	cd ../.. && rm -rf ./$HP_RULE/
 fi
 
-# Argon 主题颜色 (原厂青色)
-if [ -d package/argon ]; then
-	sed -i "s/primary '.*'/primary '#31a1a1'/; s/'0.2'/'0.5'/; s/'none'/'bing'/; s/'600'/'normal'/" package/argon/luci-app-argon-config/root/etc/config/argon
-fi
-
-# NSS 驱动启动顺序
+# [修复] NSS 驱动启动顺序 (AP8220 性能核心!)
 NSS_DRV=$(find feeds/nss_packages/ -name "qca-nss-drv.init")
 [ -f "$NSS_DRV" ] && sed -i 's/START=.*/START=85/g' $NSS_DRV
 NSS_PBUF="./package/kernel/mac80211/files/qca-nss-pbuf.init"
 [ -f "$NSS_PBUF" ] && sed -i 's/START=.*/START=86/g' $NSS_PBUF
 
-# Tailscale / Rust / Diskman 修复编译错误
+# [修复] Tailscale / Rust / Diskman 编译错误
 TS_FILE=$(find ../feeds/packages/ -maxdepth 3 -type f -wholename "*/tailscale/Makefile")
 [ -f "$TS_FILE" ] && sed -i '/\/files/d' $TS_FILE
 RUST_FILE=$(find ../feeds/packages/ -maxdepth 3 -type f -wholename "*/rust/Makefile")
@@ -87,17 +50,14 @@ RUST_FILE=$(find ../feeds/packages/ -maxdepth 3 -type f -wholename "*/rust/Makef
 DM_FILE="./package/diskman/applications/luci-app-diskman/Makefile"
 [ -f "$DM_FILE" ] && { sed -i 's/fs-ntfs/fs-ntfs3/g' $DM_FILE; sed -i '/ntfs-3g-utils /d' $DM_FILE; }
 
-# --- 系统设置 (源自 Settings.sh) ---
+# --- 系统设置 (Settings.sh) ---
 
 # 修改 IP / 主机名 / 默认主题
 sed -i "s/192\.168\.[0-9]*\.[0-9]*/$WRT_IP/g" package/base-files/files/bin/config_generate
 sed -i "s/hostname='.*'/hostname='$WRT_NAME'/g" package/base-files/files/bin/config_generate
+# 强制设置默认主题 (Argon)
 sed -i "s/luci-theme-bootstrap/luci-theme-$WRT_THEME/g" feeds/luci/collections/luci/Makefile
 sed -i "/attendedsysupgrade/d" $(find ./feeds/luci/collections/ -type f -name "Makefile")
-
-# [装饰] 修改 JS 文件关联 IP 和 增加编译日期显示
-sed -i "s/192\.168\.[0-9]*\.[0-9]*/$WRT_IP/g" $(find ./feeds/luci/modules/luci-mod-system/ -type f -name "flash.js")
-# sed -i "s/(\(luciversion || ''\))/(\1) + (' \/ $WRT_MARK-$(date +%Y.%m.%d)')/g" $(find ./feeds/luci/modules/luci-mod-status/ -type f -name "10_system.js")
 
 # 修改 WiFi
 WIFI_SH=$(find ./target/linux/qualcommax/base-files/etc/uci-defaults/ -type f -name "*set-wireless.sh" 2>/dev/null)
@@ -112,17 +72,12 @@ elif [ -f "$WIFI_UC" ]; then
     sed -i "s/country='.*'/country='CN'/g" $WIFI_UC
 fi
 
-# --- 高通平台 (AP8220) 专用配置逻辑 ---
-
-# 警告：这里必须写入 .config (因为云编译时 builder.config 会变成 .config)
+# --- 高通平台专用配置 ---
 if [[ "${WRT_TARGET^^}" == *"QUALCOMMAX"* ]]; then
-    # 禁用 NSS Feed (防炸)
 	echo "CONFIG_FEED_nss_packages=n" >> .config
 	echo "CONFIG_FEED_sqm_scripts_nss=n" >> .config
-    # 开启 NSS 插件
 	echo "CONFIG_PACKAGE_luci-app-sqm=y" >> .config
 	echo "CONFIG_PACKAGE_sqm-scripts-nss=y" >> .config
-    # 锁定固件版本 12.5
 	echo "CONFIG_NSS_FIRMWARE_VERSION_11_4=n" >> .config
 	echo "CONFIG_NSS_FIRMWARE_VERSION_12_2=n" >> .config
 	echo "CONFIG_NSS_FIRMWARE_VERSION_12_5=y" >> .config
