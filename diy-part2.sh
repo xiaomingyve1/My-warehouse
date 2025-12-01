@@ -25,3 +25,5 @@
 
 # 下载 EasyTier 源码 (P2P 异地组网神器)
 git clone https://github.com/EasyTier/OpenWrt-EasyTier package/easytier
+# 下载 KuCat 主题
+git clone https://github.com/sirpdboy/luci-theme-kucat package/luci-theme-kucat
