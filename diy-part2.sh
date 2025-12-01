@@ -27,3 +27,5 @@
 git clone https://github.com/EasyTier/OpenWrt-EasyTier package/easytier
 # 下载 KuCat 主题
 git clone https://github.com/sirpdboy/luci-theme-kucat package/luci-theme-kucat
+# 下载 UU加速器 (24.02 适配版)
+git clone https://github.com/BCYDTZ/luci-app-UUGameAcc.git package/luci-app-UUGameAcc
