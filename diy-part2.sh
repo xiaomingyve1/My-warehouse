@@ -2,7 +2,7 @@
 # Description: OpenWrt DIY script part 2 (After Update feeds)
 
 # =========================================================
-# 1. 基础设置 (定义变量，通过 export 传给 Settings.sh)
+# 1. 基础设置 (变量定义)
 # =========================================================
 export WRT_IP="192.168.6.1"           # 管理 IP
 export WRT_NAME="MyRouter-0"          # 主机名
@@ -13,11 +13,10 @@ export WRT_SSID_2G="My_AP8220_2.4G"
 export WRT_WORD_2G="12345678"
 
 # --- WiFi 5G 设置 ---
-export WRT_SSID_5G="My_AP8220"
+export WRT_SSID_5G="My_AP8220_5G"
 export WRT_WORD_5G="12345678"
 
 # --- 关键系统标识 (请勿修改/请勿删除) ---
-# 这行代码告诉脚本这是高通平台，从而开启 NSS 满血加速
 export WRT_TARGET="QUALCOMMAX"
 
 # =========================================================
@@ -45,9 +44,12 @@ if [ -f "$GITHUB_WORKSPACE/Settings.sh" ]; then
 fi
 
 # =========================================================
-# 3. 补充环境 (MosDNS 编译必需)
+# 3. 补充环境 (核心修复点)
 # =========================================================
+# 移除旧的 Go 环境
 rm -rf feeds/packages/lang/golang
-git clone https://github.com/kenzok8/golang feeds/packages/lang/golang
+
+# [修复] 改用 sbwml 的 Golang 仓库，它版本更新，能解决 AdGuardHome 报错
+git clone https://github.com/sbwml/packages_lang_golang feeds/packages/lang/golang
 
 echo "DIY-Part2 Done!"
