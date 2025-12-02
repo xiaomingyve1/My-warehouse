@@ -1,22 +1,7 @@
 #!/bin/bash
-#
-# https://github.com/P3TERX/Actions-OpenWrt
-# File name: diy-part1.sh
 # Description: OpenWrt DIY script part 1 (Before Update feeds)
-#
-# Copyright (c) 2019-2024 P3TERX <https://p3terx.com>
-#
-# This is free software, licensed under the MIT License.
-# See /LICENSE for more information.
-#
 
-# 添加 OpenClash 源
-echo "src-git openclash https://github.com/vernesong/OpenClash.git" >> feeds.conf.default
-
-# 添加 Passwall 源
-echo "src-git passwall_packages https://github.com/xiaorouji/openwrt-passwall-packages.git;main" >> feeds.conf.default
-echo "src-git passwall_luci https://github.com/xiaorouji/openwrt-passwall.git;main" >> feeds.conf.default
-
-# 添加 LinkEase 源 (ddnsto依赖)
-echo "src-git nas_packages https://github.com/linkease/nas-packages.git;master" >> feeds.conf.default
-echo "src-git nas_luci https://github.com/linkease/nas-packages-luci.git;main" >> feeds.conf.default
+# 警告：不要在这里添加任何 feed 源！
+# 你的诉求是使用 VIKINGYFY 源码自带的魔改资源。
+# 一旦在这里添加官方源 (如 xiaorouji/passwall)，就会覆盖掉源码里的优化版本。
+# 保持为空即可。
