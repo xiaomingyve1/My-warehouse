@@ -1,23 +1,34 @@
 #!/bin/bash
-# 优先使用源码自带插件 (Native First)
+# Description: OpenWrt DIY script part 2 (After Update feeds)
 
-# 1. 定义基础变量 (传给 Settings.sh 使用)
-export WRT_IP="192.168.6.1"
-export WRT_NAME="MyRouter-0"
-export WRT_THEME="argon"
-export WRT_SSID="My_AP8220"
-export WRT_WORD="12345678"
+# =========================================================
+# 1. 基础设置 (定义变量，通过 export 传给 Settings.sh)
+# =========================================================
+export WRT_IP="192.168.6.1"           # 管理 IP
+export WRT_NAME="MyRouter-0"          # 主机名
+export WRT_THEME="argon"              # 默认主题
+
+# --- WiFi 2.4G 设置 ---
+export WRT_SSID_2G="My_AP8220_2.4G"
+export WRT_WORD_2G="12345678"
+
+# --- WiFi 5G 设置 ---
+export WRT_SSID_5G="My_AP8220_5G"
+export WRT_WORD_5G="12345678"
+
 export WRT_TARGET="QUALCOMMAX"
 
-# 2. 调用 Handles.sh (修复脚本)
-# 注意：$GITHUB_WORKSPACE 是 Actions 的根目录，脚本通常在那里
+# =========================================================
+# 2. 调用外部脚本 (按顺序执行)
+# =========================================================
+
+# (1) 调用 Handles.sh (系统修复)
 if [ -f "$GITHUB_WORKSPACE/Handles.sh" ]; then
     chmod +x $GITHUB_WORKSPACE/Handles.sh
     source $GITHUB_WORKSPACE/Handles.sh
 fi
 
-# 3. 调用 Packages.sh (下载插件)
-# 这里会去下载 AdGuardHome, KuCat, MosDNS, EasyTier 等
+# (2) 调用 Packages.sh (下载插件)
 if [ -f "$GITHUB_WORKSPACE/Packages.sh" ]; then
     chmod +x $GITHUB_WORKSPACE/Packages.sh
     cd package
@@ -25,14 +36,16 @@ if [ -f "$GITHUB_WORKSPACE/Packages.sh" ]; then
     cd ..
 fi
 
-# 4. 调用 Settings.sh (应用设置 & 删除 UU/Autoreboot)
+# (3) 调用 Settings.sh (应用设置)
 if [ -f "$GITHUB_WORKSPACE/Settings.sh" ]; then
     chmod +x $GITHUB_WORKSPACE/Settings.sh
     source $GITHUB_WORKSPACE/Settings.sh
 fi
 
-# 补充：确保 Golang 环境 (MosDNS 需要)
+# =========================================================
+# 3. 补充环境 (MosDNS 编译必需)
+# =========================================================
 rm -rf feeds/packages/lang/golang
 git clone https://github.com/kenzok8/golang feeds/packages/lang/golang
 
-echo "DIY-Part2 Execution Completed!"
+echo "DIY-Part2 Done!"
