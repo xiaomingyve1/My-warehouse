@@ -1,5 +1,5 @@
 #!/bin/bash
-# Description: OpenWrt DIY script part 2 (After Update feeds)
+# Description: OpenWrt DIY script part 2
 
 # =========================================================
 # 1. 基础变量
@@ -19,35 +19,46 @@ export WRT_TARGET="QUALCOMMAX"
 MY_SCRIPTS="$GITHUB_WORKSPACE/My-warehouse/Scripts"
 
 # =========================================================
-# 3. 关键修复：清理冲突的官方驱动 (Hostapd)
+# 3. 关键修复：清理冲突的 WiFi 驱动
 # =========================================================
-# [核心修正] 必须删除 package/feeds/ 下的文件，因为它们已经被安装进去了
-# 删除后，编译器会自动寻找源码 package/network/services/ 下的自带版本
-
-echo "Nuking conflicting hostapd from package directory..."
+# 必须删除 feeds 里的 hostapd/wpad，强制使用源码自带版本
 rm -rf package/feeds/packages/net/hostapd
 rm -rf package/feeds/packages/net/wpad
 rm -rf package/feeds/network/services/hostapd
 rm -rf package/feeds/network/services/wpad
 
 # =========================================================
-# 4. 关键修复：解决 AdGuardHome Go 版本报错
+# 4. 关键修复：原生修改 Golang 为官方最新版
 # =========================================================
-# 方案 A: 尝试升级 Golang 到最新 (依赖 sbwml 更新)
-rm -rf feeds/packages/lang/golang
-git clone https://github.com/sbwml/packages_lang_golang feeds/packages/lang/golang
 
-# 方案 B (保底): 如果升级 Go 也没用，强制把 AdGuardHome 降级到稳定版 (0.107.53)
-# 找到 AGH 的 Makefile
-AGH_MAKEfile=$(find package/feeds/packages/ -name "Makefile" | grep "adguardhome")
-if [ -f "$AGH_MAKEfile" ]; then
-    echo "Force downgrading AdGuardHome to 0.107.53 to fix Go compile error..."
-    # 修改版本号
-    sed -i 's/^PKG_VERSION:=.*/PKG_VERSION:=0.107.53/' "$AGH_MAKEfile"
-    # 注释掉 hash 校验，防止降级后校验失败
-    sed -i 's/^PKG_HASH:=/# PKG_HASH:=/' "$AGH_MAKEfile"
-    # 确保不使用 Git 自动生成的版本
-    sed -i 's/^PKG_SOURCE_VERSION:=.*/# PKG_SOURCE_VERSION:=/' "$AGH_MAKEfile"
+# 直接定位系统自带的 Makefile (不再下载第三方的)
+GO_MAKEFILE="feeds/packages/lang/golang/Makefile"
+
+if [ -f "$GO_MAKEFILE" ]; then
+    echo "Querying official latest Go version..."
+    
+    # 从 Go 官网获取最新版本号 (如 go1.25.4)
+    LATEST_GO=$(curl -sL https://go.dev/VERSION?m=text | head -n1)
+    
+    # 如果获取失败，给个保底 1.25.3 (AdGuardHome 要求的最低版本)
+    if [ -z "$LATEST_GO" ]; then
+        LATEST_GO="go1.25.3"
+    fi
+    
+    # 去掉前缀 (go1.25.4 -> 1.25.4)
+    GO_VERSION="${LATEST_GO#go}"
+    
+    echo "Updating System Golang to Official $GO_VERSION..."
+    
+    # 1. 修改版本号
+    sed -i "s/^PKG_VERSION:=.*/PKG_VERSION:=$GO_VERSION/" "$GO_MAKEFILE"
+    
+    # 2. 强制跳过 Hash 校验 (因为是动态版本)
+    sed -i 's/^PKG_HASH:=.*/PKG_HASH:=skip/' "$GO_MAKEFILE"
+    
+    echo "Done. Compiler will download $GO_VERSION from Official Source."
+else
+    echo "Warning: System Golang Makefile not found at $GO_MAKEFILE"
 fi
 
 # =========================================================
