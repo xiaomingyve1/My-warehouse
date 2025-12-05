@@ -35,21 +35,13 @@ MY_SCRIPTS="$GITHUB_WORKSPACE/My-warehouse/Scripts"
 
 # =========================================================
 
-# 3. ✅ 彻底禁用官方 feeds（核心关键）
-
-# =========================================================
-
+# 3. ✅ 准备 Feeds
 echo "========================================="
-echo "✅ Using VIKINGYFY ImmortalWrt ONLY"
-echo "❌ Disabling all official feeds"
+echo "✅ Using VIKINGYFY source feeds"
 echo "========================================="
-
-# 强制清空 feeds
-
+# 移除旧的 feeds 文件夹（保留清理操作是没问题的）
 rm -rf feeds
-mkdir feeds
-
-# =========================================================
+# ⚠️ 绝对不要注释 feeds.conf.default，因为那里才有 NSS 驱动！
 
 # 4. ✅ 仅初始化 VIKINGYFY 自带 feeds（不引入官方包）
 
