@@ -69,7 +69,7 @@ fi
 
 # 高通平台调整 (AP8220 必备)
 if [[ "${WRT_TARGET^^}" == *"QUALCOMMAX"* ]]; then
-	echo "CONFIG_FEED_nss_packages=n" >> ./.config
+	echo "CONFIG_FEED_nss_packages=y" >> ./.config
 	echo "CONFIG_FEED_sqm_scripts_nss=n" >> ./.config
 	echo "CONFIG_PACKAGE_luci-app-sqm=y" >> ./.config
 	echo "CONFIG_PACKAGE_sqm-scripts-nss=y" >> ./.config
