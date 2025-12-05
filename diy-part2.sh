@@ -49,12 +49,6 @@ echo "========================================="
 rm -rf feeds
 mkdir feeds
 
-# 只保留源码自带 feeds.conf.default
-
-# （VIKINGYFY 已经在源码里魔改好了 feeds）
-
-sed -i 's/^src-git/#&/' feeds.conf.default
-
 # =========================================================
 
 # 4. ✅ 仅初始化 VIKINGYFY 自带 feeds（不引入官方包）
