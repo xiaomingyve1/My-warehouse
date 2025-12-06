@@ -1,0 +1,11 @@
+name: Restore Check
+
+on:
+  workflow_dispatch:
+
+jobs:
+  restore-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Confirm workflow visible
+        run: echo "Workflow restored and visible"
