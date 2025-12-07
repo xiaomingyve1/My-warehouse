@@ -1,15 +1,10 @@
-name: OpenWrt Build (minimal-safe, VIKINGYFY/immortalwrt main)
+name: OpenWrt Build (with Scripts/Settings, Packages, Handles)
 
 on:
   workflow_dispatch:
   push:
     branches:
       - main
-    paths:
-      - 'Config/**'
-      - 'Scripts/**'
-      - 'diy-part*.sh'
-      - '.github/workflows/openwrt-builder.yml'
 
 env:
   SOURCE_REPO: https://github.com/VIKINGYFY/immortalwrt.git
@@ -22,18 +17,18 @@ jobs:
     timeout-minutes: 360
 
     steps:
-    - name: Checkout repo (this contains builder.config and diy scripts)
+    - name: Checkout repo (contains Config/, diy-part*.sh, Scripts/)
       uses: actions/checkout@v3
       with:
         fetch-depth: 0
 
-    - name: Install minimal system deps
+    - name: Install minimal deps
       run: |
         sudo apt-get update -y
         sudo apt-get install -y build-essential git wget unzip curl \
           libncurses5-dev libssl-dev python3-distutils rsync zlib1g-dev file
 
-    - name: Clone target source (preserve your source & branch)
+    - name: Clone target source repo (VIKINGYFY/immortalwrt main)
       run: |
         echo "Cloning ${{ env.SOURCE_REPO }} branch ${{ env.SOURCE_BRANCH }} -> ${{ env.SOURCE_DIR }}"
         rm -rf "${{ env.SOURCE_DIR }}" || true
@@ -42,18 +37,46 @@ jobs:
         ./scripts/feeds update -a || true
         ./scripts/feeds install -a || true
 
-    - name: Apply builder.config & run your diy-part scripts (no modification)
+    - name: Run My-warehouse/Scripts/Settings.sh (if present)
+      run: |
+        echo ">>> Running repo root Scripts/Settings.sh (if exists)"
+        if [ -f ./Scripts/Settings.sh ]; then
+          chmod +x ./Scripts/Settings.sh || true
+          ./Scripts/Settings.sh || true
+        else
+          echo "No Scripts/Settings.sh found - skipping"
+        fi
+
+    - name: Run My-warehouse/Scripts/Packages.sh (if present)
+      run: |
+        echo ">>> Running repo root Scripts/Packages.sh (if exists)"
+        if [ -f ./Scripts/Packages.sh ]; then
+          chmod +x ./Scripts/Packages.sh || true
+          ./Scripts/Packages.sh || true
+        else
+          echo "No Scripts/Packages.sh found - skipping"
+        fi
+
+    - name: Run My-warehouse/Scripts/Handles.sh (if present)
+      run: |
+        echo ">>> Running repo root Scripts/Handles.sh (if exists)"
+        if [ -f ./Scripts/Handles.sh ]; then
+          chmod +x ./Scripts/Handles.sh || true
+          ./Scripts/Handles.sh || true
+        else
+          echo "No Scripts/Handles.sh found - skipping"
+        fi
+
+    - name: Apply builder.config & run diy-part1/2 (preserve your scripts)
       run: |
         cd "${{ env.SOURCE_DIR }}"
-
-        # copy builder.config from this repository (if present) — do not overwrite upstream files
+        # copy builder.config if present at repo root Config/
         if [ -f ../Config/builder.config ]; then
           cp -vf ../Config/builder.config .config || true
         elif [ -f ../builder.config ]; then
           cp -vf ../builder.config .config || true
         fi
-
-        # run diy-part1.sh and diy-part2.sh from repo root if they exist
+        # run diy scripts from repo root (do not overwrite original scripts)
         if [ -f ../diy-part1.sh ]; then
           chmod +x ../diy-part1.sh || true
           ../diy-part1.sh || true
@@ -63,8 +86,7 @@ jobs:
           ../diy-part2.sh || true
         fi
 
-    # ------------------ Minimal, safe fixes (non-destructive) ------------------
-    - name: Ensure nss/viking feeds exist (append-only)
+    - name: Ensure nss & viking feeds present (append-only)
       run: |
         cd "${{ env.SOURCE_DIR }}"
         touch feeds.conf.default
@@ -77,16 +99,14 @@ jobs:
         ./scripts/feeds update -i || true
         ./scripts/feeds install -a -f || true
 
-    - name: Try to fetch kmod-qca candidates if missing (won't overwrite)
+    - name: Try fetch kmod-qca candidates if missing (non-destructive)
       run: |
         cd "${{ env.SOURCE_DIR }}"
-        # only act if the expected dir truly missing
         if ! find package -maxdepth 2 -type d -name "kmod-qca-nss-drv" | grep -q .; then
           TMPDIR=$(mktemp -d)
           git clone --depth=1 https://github.com/openwrt/nss_packages.git "$TMPDIR/nss" || true
           git clone --depth=1 https://github.com/VIKINGYFY/packages.git "$TMPDIR/viking" || true
           mkdir -p package
-          # copy candidate dirs but do NOT overwrite existing package dirs
           find "$TMPDIR" -maxdepth 4 -type d -iname "*qca*" -o -iname "*nss*" -print 2>/dev/null | while read d; do
             base=$(basename "$d")
             if [ ! -d "package/$base" ]; then
@@ -98,7 +118,7 @@ jobs:
           done
           rm -rf "$TMPDIR" || true
         else
-          echo "kmod-qca-nss-drv already present; no fetch needed"
+          echo "kmod-qca-nss-drv present; skip fetch"
         fi
         ./scripts/feeds install -a -f || true
 
@@ -111,7 +131,6 @@ jobs:
         ls -la package || true
         echo "=== find qca/nss candidates ==="
         find package feeds -maxdepth 4 -type d -iname "*qca*" -o -iname "*nss*" -print || true
-    # ------------------ End minimal fixes ------------------
 
     - name: Build OpenWrt (preserve your build logic)
       run: |
